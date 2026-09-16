@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FFF7FF;
+    color: #2B2630;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6, .font-space {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+/* Custom Neobrutalism Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #FFF7FF;
+  border-left: 2.5px solid #2B2630;
+}
+::-webkit-scrollbar-thumb {
+  background: #FFF176;
+  border: 2.5px solid #2B2630;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FF9EB1;
+}
+
+/* Custom Neobrutalism Utility Classes */
+.btn-neo {
+  @apply font-space font-bold px-4 py-2.5 rounded-lg border-2.5 border-neo-dark shadow-neo bg-neo-yellow hover:bg-yellow-300 transition-all active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_0px_#2B2630] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2;
+}
+
+.btn-neo-secondary {
+  @apply font-space font-bold px-4 py-2.5 rounded-lg border-2.5 border-neo-dark shadow-neo bg-white hover:bg-neo-gray transition-all active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_0px_#2B2630] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2;
+}
+
+.btn-neo-danger {
+  @apply font-space font-bold px-4 py-2.5 rounded-lg border-2.5 border-neo-dark shadow-neo bg-neo-pink hover:bg-pink-300 text-neo-dark transition-all active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_0px_#2B2630] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2;
+}
+
+.btn-neo-mint {
+  @apply font-space font-bold px-4 py-2.5 rounded-lg border-2.5 border-neo-dark shadow-neo bg-neo-mint hover:bg-emerald-200 transition-all active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0px_0px_#2B2630] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2;
+}
+
+.card-neo {
+  @apply bg-white rounded-xl border-3 border-neo-dark shadow-neo p-5 transition-all;
+}
+
+.input-neo {
+  @apply w-full px-4 py-2.5 rounded-lg border-2.5 border-neo-dark bg-white font-jakarta focus:outline-none focus:ring-2 focus:ring-neo-yellow focus:shadow-neo transition-all placeholder:text-gray-400;
+}
+
+.badge-neo {
+  @apply inline-flex items-center px-3 py-1 rounded-md border-2 border-neo-dark font-space font-extrabold text-xs uppercase tracking-wider shadow-neo-sm;
+}
