@@ -226,13 +226,13 @@ export const OrganizerManagementPage: React.FC = () => {
               </td>
               <td className="px-4 py-3.5 text-center align-middle">
                 <div className="flex items-center justify-center gap-1.5">
-                  <button
+                  {/* <button
                     onClick={() => openEditModal(u)}
                     title="Edit Panitia"
                     className="p-2 bg-white rounded-xl border-2 border-neo-dark shadow-neo-sm hover:bg-neo-yellow transition-all cursor-pointer"
                   >
                     <Edit2 size={16} />
-                  </button>
+                  </button> */}
                   <button
                     onClick={() => openResetPassModal(u)}
                     title="Reset Password"
