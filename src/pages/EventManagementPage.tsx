@@ -15,8 +15,11 @@ import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
+import { ConfirmModal } from '../components/common/ConfirmModal';
+import { useToast } from '../components/common/Toast';
 
 export const EventManagementPage: React.FC = () => {
+  const toast = useToast();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [, setCategories] = useState<EventCategory[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,6 +30,13 @@ export const EventManagementPage: React.FC = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   const [notification, setNotification] = useState<string | null>(null);
+
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    action: () => Promise<void> | void;
+    title: string;
+    message: string;
+    confirmText: string;
+  } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -50,28 +60,40 @@ export const EventManagementPage: React.FC = () => {
     setTimeout(() => setNotification(null), 3500);
   };
 
-  const handleToggleEventStatus = async (evt: EventItem) => {
+  const handleToggleEventStatus = (evt: EventItem) => {
     const nextStatus = evt.status === 'published' ? 'draft' : 'published';
     const actionLabel = nextStatus === 'draft' ? 'menonaktifkan (Draft)' : 'mempublikasikan (Published)';
-    if (!window.confirm(`Apakah Anda yakin ingin ${actionLabel} event "${evt.title}"?`)) return;
-    try {
-      await eventifyApi.updateEventStatus(evt.id, nextStatus);
-      showNotif(`Event "${evt.title}" berhasil di-${nextStatus === 'draft' ? 'nonaktifkan (DRAFT)' : 'publikasikan (PUBLISHED)'}.`);
-      await loadData();
-    } catch (err: any) {
-      alert(err.message || 'Gagal mengubah status event');
-    }
+    setPendingConfirm({
+      title: 'Konfirmasi Perubahan Status Event',
+      message: `Apakah Anda yakin ingin ${actionLabel} event "${evt.title}"?`,
+      confirmText: 'Ya, Lanjutkan',
+      action: async () => {
+        try {
+          await eventifyApi.updateEventStatus(evt.id, nextStatus);
+          showNotif(`Event "${evt.title}" berhasil di-${nextStatus === 'draft' ? 'nonaktifkan (DRAFT)' : 'publikasikan (PUBLISHED)'}.`);
+          await loadData();
+        } catch (err: any) {
+          toast.error(err.message || 'Gagal mengubah status event');
+        }
+      },
+    });
   };
 
-  const handleDelete = async (id: string, title: string) => {
-    if (!window.confirm(`Hapus (soft delete) event "${title}"? Event akan masuk ke status ENDED.`)) return;
-    try {
-      await eventifyApi.deleteEvent(id);
-      showNotif(`Event "${title}" telah dihapus dan dialihkan ke status ENDED.`);
-      await loadData();
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus event');
-    }
+  const handleDelete = (id: string, title: string) => {
+    setPendingConfirm({
+      title: 'Konfirmasi Hapus Event',
+      message: `Hapus (soft delete) event "${title}"? Event akan masuk ke status ENDED.`,
+      confirmText: 'Ya, Hapus',
+      action: async () => {
+        try {
+          await eventifyApi.deleteEvent(id);
+          showNotif(`Event "${title}" telah dihapus dan dialihkan ke status ENDED.`);
+          await loadData();
+        } catch (err: any) {
+          toast.error(err.message || 'Gagal menghapus event');
+        }
+      },
+    });
   };
 
   const filteredEvents = events.filter((evt) => {
@@ -239,6 +261,20 @@ export const EventManagementPage: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Konfirmasi Aksi Event */}
+      <ConfirmModal
+        isOpen={!!pendingConfirm}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={() => {
+          pendingConfirm?.action();
+          setPendingConfirm(null);
+        }}
+        title={pendingConfirm?.title || 'Konfirmasi'}
+        message={pendingConfirm?.message || ''}
+        confirmText={pendingConfirm?.confirmText}
+        variant="danger"
+      />
     </div>
   );
 };

@@ -14,8 +14,10 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { useToast } from '../components/common/Toast';
 
 export const SystemSettingsPage: React.FC = () => {
+  const toast = useToast();
   const { config, toggleMaintenanceMode, updateMaintenanceMessage } = useSystem();
   const [pages, setPages] = useState<StaticPage[]>([]);
   const [activeTab, setActiveTab] = useState<'identity' | 'pages' | 'smtp' | 'maintenance'>('identity');
@@ -86,7 +88,7 @@ export const SystemSettingsPage: React.FC = () => {
       });
       showNotif('Identitas platform & Kebijakan Refund berhasil disimpan!');
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -105,7 +107,7 @@ export const SystemSettingsPage: React.FC = () => {
       });
       showNotif('Pengaturan Server SMTP Email berhasil diperbarui!');
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -118,7 +120,7 @@ export const SystemSettingsPage: React.FC = () => {
       setIsPageModalOpen(false);
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 

@@ -14,8 +14,10 @@ import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
+import { useToast } from '../components/common/Toast';
 
 export const NotificationBroadcastPage: React.FC = () => {
+  const toast = useToast();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>([]);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -70,7 +72,7 @@ export const NotificationBroadcastPage: React.FC = () => {
       setBroadcastMessage('');
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -84,7 +86,7 @@ export const NotificationBroadcastPage: React.FC = () => {
       setReplyText('');
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 

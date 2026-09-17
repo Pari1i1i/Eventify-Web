@@ -97,7 +97,7 @@ export const ReportsAnalyticsPage: React.FC = () => {
           }
           return {
             id: org.id,
-            organization: org.organization || 'Instansi Panitia',
+            organization: org.organization || org.name || 'Instansi Panitia',
             name: org.name,
             managedEvents: orgEvents.length,
             totalTickets,
@@ -289,7 +289,6 @@ export const ReportsAnalyticsPage: React.FC = () => {
           headers={[
             { label: 'Peringkat', align: 'center', className: 'w-[10%]' },
             { label: 'Nama Instansi Panitia', align: 'left', className: 'w-[26%]' },
-            { label: 'Penanggung Jawab', align: 'left', className: 'w-[20%]' },
             { label: 'Total Event Dikelola', align: 'center', className: 'w-[14%]' },
             { label: 'Event Paling Dihadiri', align: 'left', className: 'w-[18%]' },
             { label: 'Tingkat Kehadiran', align: 'center', className: 'w-[12%]' },
@@ -306,7 +305,6 @@ export const ReportsAnalyticsPage: React.FC = () => {
               <tr key={row.id} className="hover:bg-neo-yellow/10 transition-colors border-b border-neo-dark/20">
                 <td className="px-4 py-3.5 border-r-2 border-neo-dark text-center align-middle font-space font-black text-xs">#{idx + 1}</td>
                 <td className="px-4 py-3.5 border-r-2 border-neo-dark align-middle font-space font-extrabold text-xs">{row.organization}</td>
-                <td className="px-4 py-3.5 border-r-2 border-neo-dark align-middle font-jakarta text-xs font-bold text-neo-dark">{row.name}</td>
                 <td className="px-4 py-3.5 border-r-2 border-neo-dark text-center align-middle font-space font-bold text-xs">{row.managedEvents} Event</td>
                 <td className="px-4 py-3.5 border-r-2 border-neo-dark align-middle font-jakarta text-[11px] text-gray-700">
                   {row.topEvent ? (

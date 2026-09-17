@@ -5,7 +5,6 @@ import {
   Plus,
   Search,
   KeyRound,
-  Edit2,
   CheckCircle2,
   XCircle,
 } from 'lucide-react';
@@ -15,8 +14,10 @@ import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
+import { useToast } from '../components/common/Toast';
 
 export const OrganizerManagementPage: React.FC = () => {
+  const toast = useToast();
   const [organizers, setOrganizers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -56,21 +57,25 @@ export const OrganizerManagementPage: React.FC = () => {
   const handleAddOrganizer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) return;
+    if (password.length < 10) {
+      toast.warning('Password minimal 10 karakter!');
+      return;
+    }
     try {
       await eventifyApi.createUser({
         name,
         email,
         phone,
-        organization: organization || 'Instansi Panitia',
+        organization: organization || name || 'Instansi Panitia',
         role: 'organizer',
-        password: password || '123456',
+        password,
       } as any);
       showNotif(`Berhasil menambahkan akun panitia "${name}"!`);
       setIsAddModalOpen(false);
       resetForm();
       fetchOrganizers();
     } catch (err: any) {
-      alert(err.message || 'Gagal membuat panitia');
+      toast.error(err.message || 'Gagal membuat panitia');
     }
   };
 
@@ -88,20 +93,24 @@ export const OrganizerManagementPage: React.FC = () => {
       setIsEditModalOpen(false);
       fetchOrganizers();
     } catch (err: any) {
-      alert(err.message || 'Gagal memperbarui panitia');
+      toast.error(err.message || 'Gagal memperbarui panitia');
     }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || !selectedUser) return;
+    if (!selectedUser) return;
+    if (!newPassword || newPassword.length < 10) {
+      toast.warning('Password baru minimal 10 karakter!');
+      return;
+    }
     try {
       await eventifyApi.resetUserPassword(selectedUser.email, newPassword, selectedUser.id);
       showNotif(`Password akun panitia "${selectedUser.name}" berhasil di-reset!`);
       setIsResetPassModalOpen(false);
       setNewPassword('');
     } catch (err: any) {
-      alert(err.message || 'Gagal mereset password');
+      toast.error(err.message || 'Gagal mereset password');
     }
   };
 
@@ -122,15 +131,6 @@ export const OrganizerManagementPage: React.FC = () => {
     setPhone('');
     setPassword('');
     setOrganization('');
-  };
-
-  const openEditModal = (u: User) => {
-    setSelectedUser(u);
-    setName(u.name);
-    setEmail(u.email);
-    setPhone(u.phone);
-    setOrganization(u.organization || '');
-    setIsEditModalOpen(true);
   };
 
   const openResetPassModal = (u: User) => {
@@ -181,7 +181,7 @@ export const OrganizerManagementPage: React.FC = () => {
       <Card className="bg-white border-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <Input
-            placeholder="Cari nama panitia, email, atau organisasi..."
+            placeholder="Cari nama instansi, email"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             icon={<Search size={18} />}
@@ -194,8 +194,7 @@ export const OrganizerManagementPage: React.FC = () => {
 
         <Table
           headers={[
-            { label: 'Informasi Panitia', align: 'left', className: 'w-[28%]' },
-            { label: 'Organisasi / Instansi', align: 'center', className: 'w-[20%]' },
+            { label: 'Nama Instansi', align: 'left', className: 'w-[28%]' },
             { label: 'No. Handphone', align: 'center', className: 'w-[16%]' },
             { label: 'Event Dikelola', align: 'center', className: 'w-[12%]' },
             { label: 'Status Akun', align: 'center', className: 'w-[12%]' },
@@ -208,11 +207,7 @@ export const OrganizerManagementPage: React.FC = () => {
                 <p className="text-neo-dark font-space font-extrabold text-sm">{u.name}</p>
                 <p className="font-jakarta text-[11px] text-gray-500 font-semibold">{u.email}</p>
               </td>
-              <td className="px-4 py-3.5 border-r-2 border-neo-dark text-center align-middle">
-                <span className="inline-block px-3 py-1 bg-amber-100 text-amber-900 border border-amber-300 rounded-md font-space font-extrabold text-[11px]">
-                  {u.organization || 'Instansi Umum'}
-                </span>
-              </td>
+    
               <td className="px-4 py-3.5 border-r-2 border-neo-dark text-center align-middle font-jakarta text-xs font-semibold text-gray-700">
                 {u.phone && u.phone !== '-' ? u.phone : '-'}
               </td>
@@ -257,11 +252,10 @@ export const OrganizerManagementPage: React.FC = () => {
       {/* Modal Tambah Panitia */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Tambah Akun Panitia Baru">
         <form onSubmit={handleAddOrganizer} className="space-y-4">
-          <Input label="Nama Penanggung Jawab" placeholder="e.g. Siti Rahma" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Input label="Nama Instansi" placeholder="e.g. SMKN 1 Enrekang / Soundwave Indonesia" value={name} onChange={(e) => setName(e.target.value)} required />
           <Input label="Email Resmi Panitia" type="email" placeholder="e.g. siti@soundwave.co.id" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <Input label="Kata Sandi / Password Akun" type="password" placeholder="e.g. aluna123" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <Input label="No. Handphone / WhatsApp" placeholder="e.g. 081234567890" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-          <Input label="Organisasi / Nama Instansi" placeholder="e.g. Soundwave Indonesia" value={organization} onChange={(e) => setOrganization(e.target.value)} required />
+          <Input label="Kata Sandi / Password Akun" type="password" minLength={10} placeholder="min. 10 karakter" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <Input label="No. Handphone / WhatsApp" placeholder="e.g. 081234567890" type="tel" inputMode="numeric" maxLength={15} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} required />
           <Button type="submit" variant="primary" className="w-full">Simpan & Buat Akun</Button>
         </form>
       </Modal>
@@ -269,10 +263,9 @@ export const OrganizerManagementPage: React.FC = () => {
       {/* Modal Edit Panitia */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Data Panitia">
         <form onSubmit={handleEditOrganizer} className="space-y-4">
-          <Input label="Nama Penanggung Jawab" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Input label="Nama Instansi" value={name} onChange={(e) => setName(e.target.value)} required />
           <Input label="Email Official" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <Input label="No. Handphone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <Input label="Nama Instansi" value={organization} onChange={(e) => setOrganization(e.target.value)} />
+          <Input label="No. Handphone" type="tel" inputMode="numeric" maxLength={15} value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} />
           <Button type="submit" variant="primary" className="w-full">Update Data Panitia</Button>
         </form>
       </Modal>
@@ -283,7 +276,7 @@ export const OrganizerManagementPage: React.FC = () => {
           <p className="font-jakarta text-xs font-semibold text-gray-600">
             Masukkan password baru untuk akun panitia <strong>{selectedUser?.email}</strong>.
           </p>
-          <Input label="Password Baru" type="password" placeholder="••••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+          <Input label="Password Baru" type="password" minLength={10} placeholder="min. 10 karakter" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
           <Button type="submit" variant="secondary" className="w-full">Reset Password Sekarang</Button>
         </form>
       </Modal>

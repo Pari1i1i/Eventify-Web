@@ -13,8 +13,11 @@ import { Table } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { ConfirmModal } from '../components/common/ConfirmModal';
+import { useToast } from '../components/common/Toast';
 
 export const SecurityAuditPage: React.FC = () => {
+  const toast = useToast();
   const [logs, setLogs] = useState<AuditTrailLog[]>([]);
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [roles, setRoles] = useState<SubAdminRole[]>([]);
@@ -24,6 +27,11 @@ export const SecurityAuditPage: React.FC = () => {
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
   const [notification, setNotification] = useState<string | null>(null);
+
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    action: () => Promise<void> | void;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -49,15 +57,19 @@ export const SecurityAuditPage: React.FC = () => {
     setTimeout(() => setNotification(null), 3500);
   };
 
-  const handleRevokeSession = async (id: string, device: string) => {
-    if (!window.confirm(`Paksa logout perangkat "${device}"?`)) return;
-    try {
-      await eventifyApi.revokeSession(id);
-      showNotif(`Sesi pada perangkat "${device}" telah DILOGOUT paksa.`);
-      loadData();
-    } catch (err: any) {
-      alert(err.message);
-    }
+  const handleRevokeSession = (id: string, device: string) => {
+    setPendingConfirm({
+      message: `Paksa logout perangkat "${device}"?`,
+      action: async () => {
+        try {
+          await eventifyApi.revokeSession(id);
+          showNotif(`Sesi pada perangkat "${device}" telah DILOGOUT paksa.`);
+          loadData();
+        } catch (err: any) {
+          toast.error(err.message);
+        }
+      },
+    });
   };
 
   const handleAddRole = async (e: React.FormEvent) => {
@@ -75,7 +87,7 @@ export const SecurityAuditPage: React.FC = () => {
       setIsRoleModalOpen(false);
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -218,6 +230,20 @@ export const SecurityAuditPage: React.FC = () => {
           <Button type="submit" variant="primary" className="w-full">Simpan Sub-Admin Role</Button>
         </form>
       </Modal>
+
+      {/* Konfirmasi Force Logout Perangkat */}
+      <ConfirmModal
+        isOpen={!!pendingConfirm}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={() => {
+          pendingConfirm?.action();
+          setPendingConfirm(null);
+        }}
+        title="Konfirmasi Force Logout"
+        message={pendingConfirm?.message || ''}
+        confirmText="Ya, Logout Paksa"
+        variant="danger"
+      />
     </div>
   );
 };

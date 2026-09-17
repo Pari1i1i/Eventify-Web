@@ -176,7 +176,7 @@ const normalizeUser = (raw: any): User => {
     role,
     created_at: raw.created_at || new Date().toISOString(),
     status: raw.status || 'active',
-    organization: raw.organization || raw.instansi || (role === 'organizer' ? 'Organisasi Event' : undefined),
+    organization: raw.organization || raw.instansi || undefined,
     managed_events_count: Number(raw.managed_events_count ?? 0),
   };
 };

@@ -14,8 +14,10 @@ import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
+import { useToast } from '../components/common/Toast';
 
 export const ParticipantTicketPage: React.FC = () => {
+  const toast = useToast();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('all');
@@ -71,7 +73,7 @@ export const ParticipantTicketPage: React.FC = () => {
         setSelectedParticipantModal(updatedPt);
       }
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -84,14 +86,14 @@ export const ParticipantTicketPage: React.FC = () => {
         setSelectedParticipantModal(updatedPt);
       }
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
   const handleAddTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserName.trim() || !newUserEmail.trim()) {
-      alert('Nama dan Email peserta wajib diisi!');
+      toast.warning('Nama dan Email peserta wajib diisi!');
       return;
     }
     const selectedEvt = events.find((e) => e.id === newEventId) || events[0];
@@ -112,7 +114,7 @@ export const ParticipantTicketPage: React.FC = () => {
       setTicketItems([{ ticket_tier_name: 'VIP FRONTSTAGE', quantity: 1 }]);
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
