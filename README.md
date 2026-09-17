@@ -69,7 +69,7 @@ Dibangun dengan **React + TypeScript + Vite**, Tailwind CSS gaya **Neobrutalism*
 Untuk production, isi `.env.production` dengan URL API backend:
 
 ```env
-VITE_API_BASE_URL=http://139.190.96.203:8093/api/v1
+VITE_API_BASE_URL=http://<IP_ATAU_DOMAIN_SERVER>:8093/api/v1
 ```
 
 | Variabel            | Deskripsi                                    |
@@ -113,7 +113,7 @@ Ev-web/
 4. Verifikasi URL API sudah tertanam di bundel:
 
    ```bash
-   grep -o "139.190.96.203:8093" dist/assets/index-*.js | head -1
+   grep -o "<IP_ATAU_DOMAIN_SERVER>:8093" dist/assets/index-*.js | head -1
    ```
 
 5. Akses via domain & port server (contoh: `http://boothcamp.dyadev.com:9083`).
