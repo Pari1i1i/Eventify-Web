@@ -190,6 +190,14 @@ const normalizeOrder = (raw: any): Order => {
       quantity: Number(item.quantity || item.qty || 1),
       price_per_item: Number(item.price_per_item || item.price || 0),
       subtotal: Number(item.subtotal || (item.quantity * item.price_per_item) || 0),
+      tickets: Array.isArray(item.tickets)
+        ? item.tickets.map((tk: any) => ({
+          id: String(tk.id || ''),
+          code: tk.code || '',
+          status: String(tk.status || 'pending'),
+          checked_in_at: tk.checked_in_at || null,
+        }))
+        : [],
     }))
     : [];
 
@@ -251,6 +259,31 @@ const normalizeOrder = (raw: any): Order => {
     },
     items,
   };
+};
+
+// SATU sumber kebenaran untuk jumlah tiket sebuah order.
+// Dipakai konsisten oleh Dashboard, halaman Peserta, dan Laporan agar angkanya sama.
+export const orderTicketQty = (o: Order | null | undefined): number => {
+  if (!o) return 0;
+  if (Array.isArray(o.items) && o.items.length > 0) {
+    return o.items.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0);
+  }
+  return 1;
+};
+
+// Order aktif = order yang tiketnya benar-benar diterbitkan (bukan cancelled/expired).
+export const isActiveOrder = (o: Order | null | undefined): boolean => {
+  if (!o) return false;
+  return String(o.status || '').toLowerCase() !== 'cancelled';
+};
+
+// Jumlah tiket yang SUDAH check-in (hadir) pada sebuah order.
+export const orderCheckedInQty = (o: Order | null | undefined): number => {
+  if (!o || !Array.isArray(o.items)) return 0;
+  return o.items.reduce((sum, item) => {
+    if (!Array.isArray(item?.tickets)) return sum;
+    return sum + item.tickets.filter((t) => String(t?.status || '').toLowerCase() === 'checked_in').length;
+  }, 0);
 };
 
 const extractArrayData = <T>(resData: any): T[] => {
@@ -400,57 +433,60 @@ export const eventifyApi = {
       return st === 'paid' || st === 'success' || st === 'settlement' || st === 'completed';
     });
 
-    // Total pendapatan dari API / hitungan order lunas
-    const finalTotalRevenue = rawData?.total_revenue !== undefined
-      ? Number(rawData.total_revenue)
-      : paidOrders.reduce((acc, o) => acc + (Number(o?.total_amount) || 0), 0);
+    // Total pendapatan HARUS dihitung dari paid orders yang sama persis dengan data grafik
+    // supaya angka stat card dan chart SELALU COCOK.
+    const finalTotalRevenue = paidOrders.reduce((acc, o) => acc + (Number(o?.total_amount) || 0), 0);
 
-    // 2. Hitung tiket terjual
-    let ticketsSoldTotal = rawData?.total_tickets_sold !== undefined
-      ? Number(rawData.total_tickets_sold)
-      : (rawData?.tickets_sold ? Number(rawData.tickets_sold) : 0);
+    // 2. Hitung tiket terjual dari SUMBER YANG SAMA dengan halaman Peserta & Laporan:
+    //    jumlah tiket dari order aktif (paid + free), bukan dari field agregat API.
+    let ticketsSoldTotal = orders.filter(isActiveOrder).reduce((acc, o) => acc + orderTicketQty(o), 0);
 
     if (ticketsSoldTotal === 0) {
-      ticketsSoldTotal = events.reduce((acc, e) => acc + (Number(e?.sold_tickets) || 0), 0);
-      if (ticketsSoldTotal === 0 && paidOrders.length > 0) {
-        ticketsSoldTotal = paidOrders.reduce((acc, o) => {
-          const itemQty = Array.isArray(o?.items)
-            ? o.items.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0)
-            : 1;
-          return acc + itemQty;
-        }, 0);
-      }
+      ticketsSoldTotal = rawData?.total_tickets_sold !== undefined
+        ? Number(rawData.total_tickets_sold)
+        : (rawData?.tickets_sold ? Number(rawData.tickets_sold) : 0);
     }
 
     // 3. Bangun titik grafik daily_transactions secara sinkron agar nilainya sesuai dengan total_revenue di atas
-    let dailyTransactionsCalc: { date: string; revenue: number; tickets: number }[] = [];
+    let dailyTransactionsCalc: { date: string; revenue: number; tickets: number; iso_date?: string }[] = [];
 
     if (paidOrders.length > 0) {
-      const grouped: { [key: string]: { revenue: number; tickets: number } } = {};
+      const grouped: { [key: string]: { date: string; ts: number; revenue: number; tickets: number } } = {};
       paidOrders.forEach((ord) => {
-        const dateStr = ord.created_at
-          ? new Date(ord.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+        const d = ord.created_at ? new Date(ord.created_at) : null;
+        const valid = d && !isNaN(d.getTime());
+        const isoKey = valid ? d!.toISOString().slice(0, 10) : '9999-99-99';
+        const dateStr = valid
+          ? d!.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
           : 'Hari Ini';
-        if (!grouped[dateStr]) grouped[dateStr] = { revenue: 0, tickets: 0 };
-        grouped[dateStr].revenue += Number(ord.total_amount || 0);
-        grouped[dateStr].tickets += ord.items ? ord.items.reduce((s, i) => s + (i.quantity || 1), 0) : 1;
+        if (!grouped[isoKey]) grouped[isoKey] = { date: dateStr, ts: valid ? d!.getTime() : Number.MAX_SAFE_INTEGER, revenue: 0, tickets: 0 };
+        grouped[isoKey].revenue += Number(ord.total_amount || 0);
+        grouped[isoKey].tickets += ord.items ? ord.items.reduce((s, i) => s + (i.quantity || 1), 0) : 1;
       });
-      dailyTransactionsCalc = Object.keys(grouped).map((k) => ({
-        date: k,
-        revenue: grouped[k].revenue,
-        tickets: grouped[k].tickets,
-      }));
+      dailyTransactionsCalc = Object.entries(grouped)
+        .sort((a, b) => a[1].ts - b[1].ts)
+        .map(([iso, g]) => ({
+          date: g.date,
+          revenue: g.revenue,
+          tickets: g.tickets,
+          iso_date: iso === '9999-99-99' ? undefined : iso,
+        }));
     }
 
     if (dailyTransactionsCalc.length === 0) {
       // Jika data order belum ada titik tanggalnya, buatkan distribusi kurva tren berdasarkan finalTotalRevenue
-      const days = ['10 Sep', '11 Sep', '12 Sep', '13 Sep', '14 Sep', '15 Sep', '16 Sep'];
       const weightFactors = [0.05, 0.1, 0.15, 0.2, 0.15, 0.25, 0.1];
-      dailyTransactionsCalc = days.map((d, idx) => ({
-        date: d,
-        revenue: Math.round(finalTotalRevenue * weightFactors[idx]),
-        tickets: Math.floor(weightFactors[idx] * 10) || 1,
-      }));
+      const now = new Date();
+      dailyTransactionsCalc = weightFactors.map((w, idx) => {
+        const d = new Date(now);
+        d.setDate(now.getDate() - (weightFactors.length - 1 - idx));
+        return {
+          date: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+          iso_date: d.toISOString().slice(0, 10),
+          revenue: Math.round(finalTotalRevenue * w),
+          tickets: Math.floor(w * 10) || 1,
+        };
+      });
     }
 
     const refunds = getStorageItem('eventify_mock_refunds', INITIAL_MOCK_REFUNDS);
@@ -468,9 +504,7 @@ export const eventifyApi = {
       total_revenue: finalTotalRevenue,
       pending_tickets_count: rawData?.pending_tickets_count ?? rawData?.pendingTicketsCount ?? tickets.filter((t) => t.status !== 'resolved').length,
       pending_refunds_count: rawData?.pending_refunds_count ?? rawData?.pendingRefundsCount ?? refunds.filter((r) => r.status === 'pending').length,
-      daily_transactions: Array.isArray(rawData?.daily_transactions || rawData?.dailyTransactions) && (rawData.daily_transactions || rawData.dailyTransactions).length > 0
-        ? rawData.daily_transactions || rawData.dailyTransactions
-        : dailyTransactionsCalc,
+      daily_transactions: dailyTransactionsCalc,
       recent_events: Array.isArray(rawData?.recent_events) && rawData.recent_events.length > 0
         ? rawData.recent_events.map(normalizeEvent)
         : events.slice(0, 5),
@@ -487,7 +521,7 @@ export const eventifyApi = {
   getUsers: async (): Promise<User[]> => {
     let usersList: User[] = [];
     try {
-      const res = await apiClient.get('/admin/users');
+      const res = await apiClient.get('/admin/users', { params: { limit: 9999, page: 1 } });
       const apiData = extractArrayData<any>(res.data).map(normalizeUser);
       if (apiData.length > 0) {
         usersList = apiData;
@@ -706,9 +740,9 @@ export const eventifyApi = {
     try {
       let res;
       try {
-        res = await apiClient.get('/admin/events');
+        res = await apiClient.get('/admin/events', { params: { limit: 9999, page: 1 } });
       } catch {
-        res = await apiClient.get('/events');
+        res = await apiClient.get('/events', { params: { limit: 9999, page: 1 } });
       }
       const data = extractArrayData<any>(res.data);
       if (data.length > 0) return data.map(normalizeEvent);
@@ -1013,15 +1047,23 @@ export const eventifyApi = {
 
         if (existingIdx !== -1) {
           const existingPt = resultParticipants[existingIdx];
-          if (existingPt.tickets && existingPt.tickets.length > 0) {
-            convertedParticipant.tickets = generatedTickets.map((t) => {
-              const matched = existingPt.tickets?.find((et) => et.ticket_code === t.ticket_code || et.id === t.id);
-              return matched ? matched : t;
-            });
-          }
+          // AKUMULASI tiket dari semua order milik peserta yang sama (jangan ditimpa),
+          // supaya jumlah tiket di halaman ini sama dengan Dashboard & Laporan.
+          const mergedTickets: ParticipantTicketItem[] = [...(existingPt.tickets || [])];
+          generatedTickets.forEach((t) => {
+            const dup = mergedTickets.some((et) => et.ticket_code === t.ticket_code || et.id === t.id);
+            if (!dup) mergedTickets.push(t);
+          });
+          const mergedTierSummary = Array.from(new Set(mergedTickets.map((t) => t.ticket_tier_name))).join(' & ');
+          const thisOrderConfirmed = st === 'paid' || st === 'success' || st === 'settlement' || st === 'completed';
           resultParticipants[existingIdx] = {
-            ...convertedParticipant,
-            registration_status: existingPt.registration_status || convertedParticipant.registration_status,
+            ...existingPt,
+            user_name: finalName || existingPt.user_name,
+            user_email: finalEmail || existingPt.user_email,
+            event_title: ord.event_title || existingPt.event_title,
+            registration_status: thisOrderConfirmed || existingPt.registration_status === 'confirmed' ? 'confirmed' : existingPt.registration_status,
+            tickets: mergedTickets,
+            ticket_tier_name: mergedTierSummary || existingPt.ticket_tier_name,
           };
         } else {
           resultParticipants.unshift(convertedParticipant);
@@ -1175,7 +1217,7 @@ export const eventifyApi = {
   // --- Orders & Finance ---
   getOrders: async (): Promise<Order[]> => {
     try {
-      const res = await apiClient.get('/admin/orders');
+      const res = await apiClient.get('/admin/orders', { params: { limit: 9999, page: 1 } });
       const data = extractArrayData<any>(res.data);
       if (data.length > 0) return data.map(normalizeOrder);
     } catch (err) {

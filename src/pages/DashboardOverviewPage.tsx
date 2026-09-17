@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { StatCard } from '../components/common/StatCard';
 import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -19,6 +18,42 @@ import {
   Tooltip,
   CartesianGrid,
 } from 'recharts';
+
+type ChartPoint = { date: string; revenue: number; tickets: number };
+
+const aggregateChartData = (
+  data: { date: string; revenue: number; tickets: number; iso_date?: string }[],
+  period: 'daily' | 'weekly' | 'monthly',
+): ChartPoint[] => {
+  if (period === 'daily') {
+    return data.map((d) => ({ date: d.date, revenue: d.revenue, tickets: d.tickets }));
+  }
+  const groups: { [key: string]: ChartPoint & { ts: number } } = {};
+  data.forEach((d) => {
+    const dt = d.iso_date ? new Date(d.iso_date) : null;
+    if (!dt || isNaN(dt.getTime())) return;
+    let key: string;
+    let label: string;
+    let ts: number;
+    if (period === 'weekly') {
+      const week = Math.floor((dt.getDate() - 1) / 7) + 1;
+      const monthShort = dt.toLocaleDateString('id-ID', { month: 'short' });
+      key = `${dt.getFullYear()}-${dt.getMonth()}-W${week}`;
+      label = `Mgg ${week} ${monthShort}`;
+      ts = new Date(dt.getFullYear(), dt.getMonth(), (week - 1) * 7 + 1).getTime();
+    } else {
+      key = `${dt.getFullYear()}-${dt.getMonth()}`;
+      label = dt.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+      ts = new Date(dt.getFullYear(), dt.getMonth(), 1).getTime();
+    }
+    if (!groups[key]) groups[key] = { date: label, revenue: 0, tickets: 0, ts };
+    groups[key].revenue += d.revenue;
+    groups[key].tickets += d.tickets;
+  });
+  return Object.values(groups)
+    .sort((a, b) => a.ts - b.ts)
+    .map((g) => ({ date: g.date, revenue: g.revenue, tickets: g.tickets }));
+};
 
 export const DashboardOverviewPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -66,7 +101,7 @@ export const DashboardOverviewPage: React.FC = () => {
     );
   }
 
-  const chartData = stats.daily_transactions || [];
+  const chartData = aggregateChartData(stats.daily_transactions || [], period);
   const hasSparseData = chartData.length > 0 && chartData.length < 3;
 
   return (
@@ -227,8 +262,6 @@ export const DashboardOverviewPage: React.FC = () => {
         <div className="space-y-3">
           {stats.recent_orders && stats.recent_orders.length > 0 ? (
             stats.recent_orders.map((ord) => {
-              const isPaid = ord.status === 'paid';
-              const isPending = ord.status === 'pending';
               return (
                 <div
                   key={ord.id}

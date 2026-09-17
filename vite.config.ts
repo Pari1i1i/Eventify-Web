@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/v1': {
-        target: 'https://photograph-revision-tell-lynn.trycloudflare.com',
+        target: 'https://photographic-more-clearly-essays.trycloudflare.com',
         changeOrigin: true,
         secure: false,
       },

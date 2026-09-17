@@ -76,12 +76,20 @@ export interface EventCategory {
 
 export type OrderStatus = 'paid' | 'pending' | 'cancelled' | 'refunded';
 
+export interface OrderItemTicket {
+  id: string;
+  code: string;
+  status: string;
+  checked_in_at?: string | null;
+}
+
 export interface OrderItem {
   ticket_tier_id: string;
   ticket_tier_name: string;
   quantity: number;
   price_per_item: number;
   subtotal: number;
+  tickets?: OrderItemTicket[];
 }
 
 export interface Order {
@@ -244,7 +252,8 @@ export interface SMTPConfig {
 export interface DailyTransaction {
   date: string;
   revenue: number;
-  orders: number;
+  tickets: number;
+  iso_date?: string;
 }
 
 export interface DashboardStats {

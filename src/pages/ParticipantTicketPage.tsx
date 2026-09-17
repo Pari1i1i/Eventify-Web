@@ -5,8 +5,6 @@ import {
   Search,
   Download,
   CheckCircle2,
-  Ticket,
-  QrCode,
   UserCheck,
   Plus,
 } from 'lucide-react';
@@ -320,7 +318,7 @@ export const ParticipantTicketPage: React.FC = () => {
           headers={[
             { label: 'Nama Peserta', align: 'left', className: 'w-[24%]' },
             { label: 'Event Terdaftar', align: 'left', className: 'w-[22%]' },
-            { label: 'Kategori Tiket', align: 'center', className: 'w-[26%]' },
+            { label: 'Kategori Tiket', align: 'left', className: 'w-[26%]' },
             { label: 'Tanggal Daftar', align: 'center', className: 'w-[12%]' },
             // { label: 'Status Check-in', align: 'center', className: 'w-[12%]' },
             // { label: 'Aksi Gate', align: 'center', className: 'w-[14%]' },
@@ -328,7 +326,6 @@ export const ParticipantTicketPage: React.FC = () => {
         >
           {filteredParticipants.map((p) => {
             const ticketSummary = getParticipantTicketSummary(p);
-            const statusInfo = getCheckInStatusInfo(p);
 
             return (
               <tr key={p.id} className="hover:bg-neo-yellow/10 transition-colors border-b border-neo-dark/20">
@@ -344,19 +341,16 @@ export const ParticipantTicketPage: React.FC = () => {
                 </td>
 
                 {/* Kategori Tiket (Dukungan Banyak Tiket Per Peserta) */}
-                <td className="px-4 py-3.5 border-r-2 border-neo-dark text-center align-middle">
-                  <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <td className="px-4 py-3.5 border-r-2 border-neo-dark align-middle">
+                  <ul className="space-y-1">
                     {ticketSummary.map((item, idx) => (
-                      <Badge
-                        key={idx}
-                        variant={item.tierName.includes('VIP') ? 'mint' : 'yellow'}
-                        className="inline-flex items-center gap-1 text-[11px] font-space font-black px-2.5 py-1 uppercase"
-                      >
-                        <Ticket size={12} />
-                        {item.count}x {item.tierName}
-                      </Badge>
+                      <li key={idx} className="flex items-center gap-2 font-jakarta text-[11px] text-neo-dark">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.tierName.includes('VIP') ? 'bg-neo-mint' : 'bg-neo-dark'}`} />
+                        <span className="font-space font-extrabold shrink-0">{item.count}x</span>
+                        <span className="font-semibold uppercase truncate max-w-[160px]" title={item.tierName}>{item.tierName}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </td>
 
                 {/* Tanggal Daftar */}
