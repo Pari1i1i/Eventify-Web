@@ -74,7 +74,7 @@ VITE_API_BASE_URL=http://<IP_ATAU_DOMAIN_SERVER>:8093/api/v1
 
 | Variabel            | Deskripsi                                    |
 | ------------------- | -------------------------------------------- |
-| `VITE_API_BASE_URL` | Base URL API (contoh: `http://host:8093/api/v1`). Fallback-nya `/api/v1`. |
+| `VITE_API_BASE_URL` | Base URL API. Fallback-nya `/api/v1`. |
 
 > Catatan: nilai env hanya dibaca saat **build** (di-inline oleh Vite ke bundel). Setiap ubah `.env`, wajib build ulang.
 
@@ -116,13 +116,7 @@ Ev-web/
    grep -o "<IP_ATAU_DOMAIN_SERVER>:8093" dist/assets/index-*.js | head -1
    ```
 
-5. Akses via domain & port server (contoh: `http://boothcamp.dyadev.com:9083`).
-
-## Akun Awal (Seed)
-
-| Role  | Email               | Password   |
-| ----- | ------------------- | ---------- |
-| Admin | `admin@eventify.id` | `admin123` |
+5. Akses via domain & port server
 
 ## Lisensi
 
